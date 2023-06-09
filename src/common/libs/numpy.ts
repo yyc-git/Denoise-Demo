@@ -1,20 +1,22 @@
-/* jshint esversion: 6 */
-
 var numpy = numpy || {};
 
-numpy.Array = class {
+numpy.Array = class Array {
+    private _shape
+    private _byteOrder
+    private _dataType
+    private _data
 
     constructor(buffer) {
         if (buffer) {
             const reader = new numpy.Reader(buffer);
-            const signature = [ 0x93, 0x4E, 0x55, 0x4D, 0x50, 0x59 ];
+            const signature = [0x93, 0x4E, 0x55, 0x4D, 0x50, 0x59];
             if (!reader.bytes(6).every((v, i) => v == signature[i])) {
                 throw new numpy.Error('Invalid signature.');
             }
             const major = reader.byte();
             const minor = reader.byte();
             if (major !== 1 && minor !== 0) {
-                throw new numpy.Error("Invalid version '" + [ major, minor ].join('.') + "'.");
+                throw new numpy.Error("Invalid version '" + [major, minor].join('.') + "'.");
             }
             const header = JSON.parse(reader.string().trim().replace(/'/g, '"').replace("False", "false").replace("(", "[").replace(/,*\),*/g, "]"));
             if (header.fortran_order) {
@@ -86,11 +88,13 @@ numpy.Array = class {
 
         const writer = new numpy.Writer();
 
-        writer.bytes([ 0x93, 0x4E, 0x55, 0x4D, 0x50, 0x59 ]); // '\\x93NUMPY'
+        writer.bytes([0x93, 0x4E, 0x55, 0x4D, 0x50, 0x59]); // '\\x93NUMPY'
         writer.byte(1); // major
         writer.byte(0); // minor
 
         const context = {
+            data: null,
+            view: null,
             itemSize: 1,
             position: 0,
             dataType: this._dataType,
@@ -190,6 +194,8 @@ numpy.Array = class {
 };
 
 numpy.Reader = class {
+    private _buffer
+    private _position
 
     constructor(buffer) {
         this._buffer = buffer;
@@ -229,6 +235,9 @@ numpy.Reader = class {
 };
 
 numpy.Writer = class {
+    private _length
+    private _head
+    private _tail
 
     constructor() {
         this._length = 0;
@@ -294,4 +303,4 @@ numpy.Error = class extends Error {
     }
 };
 
-export {numpy};
+export { numpy };

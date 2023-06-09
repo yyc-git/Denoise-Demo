@@ -8,9 +8,9 @@
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
 		// "noEmit": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"noImplicitReturns": true,
+		// "noUnusedLocals": true,
+		// "noUnusedParameters": true,
+		// "noImplicitReturns": true,
 		"lib": [
 			"DOM",
 			"ESNext",

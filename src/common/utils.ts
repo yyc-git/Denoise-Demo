@@ -1,7 +1,8 @@
 'use strict';
 
-import {numpy} from './libs/numpy.js';
-import {addAlert} from './ui.js';
+// import {numpy} from './libs/numpy.js';
+import {numpy} from './libs/numpy';
+// import {addAlert} from './ui.js';
 
 export function sizeOfShape(shape) {
   return shape.reduce((a, b) => {
@@ -167,7 +168,7 @@ export function getInputTensor(inputElement, inputOptions) {
     }
   }
 
-  let pixels = canvasContext.getImageData(0, 0, width, height).data;
+  let pixels:any = canvasContext.getImageData(0, 0, width, height).data;
 
   if (normlizationFlag) {
     pixels = new Float32Array(pixels).map((p) => p / 255);
@@ -203,158 +204,158 @@ export function getMedianValue(array) {
       (array[array.length / 2 - 1] + array[array.length / 2]) / 2;
 }
 
-// Set tf.js backend based WebNN's 'MLDeviceType' option
-export async function setPolyfillBackend(device) {
-  // Simulate WebNN's device selection using various tf.js backends.
-  // MLDeviceType: ['default', 'gpu', 'cpu']
-  // 'default' or 'gpu': tfjs-backend-webgl, 'cpu': tfjs-backend-wasm
-  if (!device) device = 'gpu';
-  // Use 'webgl' by default for better performance.
-  // Note: 'wasm' backend may run failed on some samples since
-  // some ops aren't supported on 'wasm' backend at present
-  const backend = device === 'cpu' ? 'wasm' : 'webgl';
-  const context = await navigator.ml.createContext();
-  const tf = context.tf;
-  if (tf) {
-    if (backend == 'wasm') {
-      const wasm = context.wasm;
-      // Force to use Wasm SIMD only
-      wasm.setWasmPath(`https://unpkg.com/@tensorflow/tfjs-backend-wasm@${tf.version_core}/dist/tfjs-backend-wasm-simd.wasm`);
-    }
-    if (!(await tf.setBackend(backend))) {
-      throw new Error(`Failed to set tf.js backend ${backend}.`);
-    }
-    await tf.ready();
-    let backendInfo = backend == 'wasm' ? 'WASM' : 'WebGL';
-    if (backendInfo == 'WASM') {
-      const hasSimd = tf.env().features['WASM_HAS_SIMD_SUPPORT'];
-      const hasThreads = tf.env().features['WASM_HAS_MULTITHREAD_SUPPORT'];
-      if (hasThreads && hasSimd) {
-        backendInfo += ' (SIMD + threads)';
-      } else if (hasThreads && !hasSimd) {
-        backendInfo += ' (threads)';
-      } else if (!hasThreads && hasSimd) {
-        backendInfo += ' (SIMD)';
-      }
-    }
-    addAlert(
-        `This sample is running on ` +
-        `<a href='https://github.com/webmachinelearning/webnn-polyfill'>` +
-        `WebNN-polyfill</a> with tf.js ${tf.version_core} ` +
-        `<b>${backendInfo}</b> backend.`, 'info');
-  }
-}
+// // Set tf.js backend based WebNN's 'MLDeviceType' option
+// export async function setPolyfillBackend(device) {
+//   // Simulate WebNN's device selection using various tf.js backends.
+//   // MLDeviceType: ['default', 'gpu', 'cpu']
+//   // 'default' or 'gpu': tfjs-backend-webgl, 'cpu': tfjs-backend-wasm
+//   if (!device) device = 'gpu';
+//   // Use 'webgl' by default for better performance.
+//   // Note: 'wasm' backend may run failed on some samples since
+//   // some ops aren't supported on 'wasm' backend at present
+//   const backend = device === 'cpu' ? 'wasm' : 'webgl';
+//   const context = await navigator.ml.createContext();
+//   const tf = context.tf;
+//   if (tf) {
+//     if (backend == 'wasm') {
+//       const wasm = context.wasm;
+//       // Force to use Wasm SIMD only
+//       wasm.setWasmPath(`https://unpkg.com/@tensorflow/tfjs-backend-wasm@${tf.version_core}/dist/tfjs-backend-wasm-simd.wasm`);
+//     }
+//     if (!(await tf.setBackend(backend))) {
+//       throw new Error(`Failed to set tf.js backend ${backend}.`);
+//     }
+//     await tf.ready();
+//     let backendInfo = backend == 'wasm' ? 'WASM' : 'WebGL';
+//     if (backendInfo == 'WASM') {
+//       const hasSimd = tf.env().features['WASM_HAS_SIMD_SUPPORT'];
+//       const hasThreads = tf.env().features['WASM_HAS_MULTITHREAD_SUPPORT'];
+//       if (hasThreads && hasSimd) {
+//         backendInfo += ' (SIMD + threads)';
+//       } else if (hasThreads && !hasSimd) {
+//         backendInfo += ' (threads)';
+//       } else if (!hasThreads && hasSimd) {
+//         backendInfo += ' (SIMD)';
+//       }
+//     }
+//     addAlert(
+//         `This sample is running on ` +
+//         `<a href='https://github.com/webmachinelearning/webnn-polyfill'>` +
+//         `WebNN-polyfill</a> with tf.js ${tf.version_core} ` +
+//         `<b>${backendInfo}</b> backend.`, 'info');
+//   }
+// }
 
-// Get url params
-export function getUrlParams() {
-  const params = new URLSearchParams(location.search);
-  // Get 'numRuns' param to run inference multiple times
-  let numRuns = params.get('numRuns');
-  numRuns = numRuns === null ? 1 : parseInt(numRuns);
-  if (numRuns < 1) {
-    addAlert(`Ignore the url param: 'numRuns', its value must be >= 1.`);
-    numRuns = 1;
-  }
+// // Get url params
+// export function getUrlParams() {
+//   const params = new URLSearchParams(location.search);
+//   // Get 'numRuns' param to run inference multiple times
+//   let numRuns = params.get('numRuns');
+//   numRuns = numRuns === null ? 1 : parseInt(numRuns);
+//   if (numRuns < 1) {
+//     addAlert(`Ignore the url param: 'numRuns', its value must be >= 1.`);
+//     numRuns = 1;
+//   }
 
-  // Get 'powerPreference' param to set WebNN's 'MLPowerPreference' option
-  let powerPreference = params.get('powerPreference');
-  const powerPreferences = ['default', 'high-performance', 'low-power'];
+//   // Get 'powerPreference' param to set WebNN's 'MLPowerPreference' option
+//   let powerPreference = params.get('powerPreference');
+//   const powerPreferences = ['default', 'high-performance', 'low-power'];
 
-  if (powerPreference && !powerPreferences.includes(powerPreference)) {
-    addAlert(`Ignore the url param: 'powerPreference', its value must be ` +
-        `one of {'default', 'high-performance', 'low-power'}.`);
-    powerPreference = null;
-  }
+//   if (powerPreference && !powerPreferences.includes(powerPreference)) {
+//     addAlert(`Ignore the url param: 'powerPreference', its value must be ` +
+//         `one of {'default', 'high-performance', 'low-power'}.`);
+//     powerPreference = null;
+//   }
 
-  return [numRuns, powerPreference];
-}
+//   return [numRuns, powerPreference];
+// }
 
-// Set backend for using WebNN-polyfill or WebNN
-export async function setBackend(backend, device) {
-  const webnnPolyfillId = 'webnn_polyfill';
-  const webnnNodeId = 'webnn_node';
-  const webnnPolyfillElem = document.getElementById(webnnPolyfillId);
-  const webnnNodeElem = document.getElementById(webnnNodeId);
+// // Set backend for using WebNN-polyfill or WebNN
+// export async function setBackend(backend, device) {
+//   const webnnPolyfillId = 'webnn_polyfill';
+//   const webnnNodeId = 'webnn_node';
+//   const webnnPolyfillElem = document.getElementById(webnnPolyfillId);
+//   const webnnNodeElem = document.getElementById(webnnNodeId);
 
-  if (backend === 'polyfill') {
-    if (webnnNodeElem) {
-      document.body.removeChild(webnnNodeElem);
-      // Unset global objects defined in node_setup.js
-      global.navigator.ml = undefined;
-      global.MLContext = undefined;
-      global.MLGraphBuilder = undefined;
-      global.MLGraph = undefined;
-      global.MLOperand = undefined;
-    }
-    if (!webnnPolyfillElem) {
-      const webnnPolyfillUrl =
-          'https://webmachinelearning.github.io/webnn-polyfill/dist/webnn-polyfill.js';
-      if (typeof(tf) != 'undefined') {
-        // Reset tf.ENV to avoid environments from tf.min.js
-        // affect webnn-polyfill.js
-        tf.engine().reset();
-      }
-      // Create WebNN-polyfill script
-      await loadScript(webnnPolyfillUrl, webnnPolyfillId);
-    }
-    await setPolyfillBackend(device);
-  } else if (backend === 'webnn') {
-    // For Electron
-    if (isElectron()) {
-      if (webnnPolyfillElem) {
-        document.body.removeChild(webnnPolyfillElem);
-      }
-      if (!webnnNodeElem) {
-        // Create WebNN node script, node_setup.js is located at
-        // https://github.com/webmachinelearning/webnn-native/tree/main/node/examples/electron/webnn-samples
-        // Specific for running samples with WebNN node addon on Electron.js
-        await loadScript('../../node_setup.js', webnnNodeId);
-      }
-      addAlert(
-          `This sample is running on WebNN-native with <b>${device}</b>` +
-          ` backend.`, 'info');
-    } else {
-      // For Browser
-      if (!isWebNN()) {
-        addAlert(`WebNN is not supported!`, 'warning');
-      }
-    }
-  } else {
-    addAlert(`Unknow backend: ${backend}`, 'warning');
-  }
-}
+//   if (backend === 'polyfill') {
+//     if (webnnNodeElem) {
+//       document.body.removeChild(webnnNodeElem);
+//       // Unset global objects defined in node_setup.js
+//       global.navigator.ml = undefined;
+//       global.MLContext = undefined;
+//       global.MLGraphBuilder = undefined;
+//       global.MLGraph = undefined;
+//       global.MLOperand = undefined;
+//     }
+//     if (!webnnPolyfillElem) {
+//       const webnnPolyfillUrl =
+//           'https://webmachinelearning.github.io/webnn-polyfill/dist/webnn-polyfill.js';
+//       if (typeof(tf) != 'undefined') {
+//         // Reset tf.ENV to avoid environments from tf.min.js
+//         // affect webnn-polyfill.js
+//         tf.engine().reset();
+//       }
+//       // Create WebNN-polyfill script
+//       await loadScript(webnnPolyfillUrl, webnnPolyfillId);
+//     }
+//     await setPolyfillBackend(device);
+//   } else if (backend === 'webnn') {
+//     // For Electron
+//     if (isElectron()) {
+//       if (webnnPolyfillElem) {
+//         document.body.removeChild(webnnPolyfillElem);
+//       }
+//       if (!webnnNodeElem) {
+//         // Create WebNN node script, node_setup.js is located at
+//         // https://github.com/webmachinelearning/webnn-native/tree/main/node/examples/electron/webnn-samples
+//         // Specific for running samples with WebNN node addon on Electron.js
+//         await loadScript('../../node_setup.js', webnnNodeId);
+//       }
+//       addAlert(
+//           `This sample is running on WebNN-native with <b>${device}</b>` +
+//           ` backend.`, 'info');
+//     } else {
+//       // For Browser
+//       if (!isWebNN()) {
+//         addAlert(`WebNN is not supported!`, 'warning');
+//       }
+//     }
+//   } else {
+//     addAlert(`Unknow backend: ${backend}`, 'warning');
+//   }
+// }
 
-// Promise to load script with url and id
-async function loadScript(url, id) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.onload = resolve;
-    script.onerror = reject;
-    script.src = url;
-    script.id = id;
-    if (url.startsWith('http')) {
-      script.crossOrigin = 'anonymous';
-    }
-    document.body.appendChild(script);
-  });
-}
+// // Promise to load script with url and id
+// async function loadScript(url, id) {
+//   return new Promise((resolve, reject) => {
+//     const script = document.createElement('script');
+//     script.onload = resolve;
+//     script.onerror = reject;
+//     script.src = url;
+//     script.id = id;
+//     if (url.startsWith('http')) {
+//       script.crossOrigin = 'anonymous';
+//     }
+//     document.body.appendChild(script);
+//   });
+// }
 
-export function isElectron() {
-  const userAgent = navigator.userAgent.toLowerCase();
-  return userAgent.indexOf(' electron/') > -1;
-}
+// export function isElectron() {
+//   const userAgent = navigator.userAgent.toLowerCase();
+//   return userAgent.indexOf(' electron/') > -1;
+// }
 
-export function isWebNN() {
-  // This would be used in
-  // https://github.com/webmachinelearning/webnn-native/tree/main/node/examples/electron/webnn-samples,
-  // where WebNN is enabled by default.
-  if (isElectron()) {
-    return true;
-  } else {
-    if (typeof MLGraphBuilder !== 'undefined') {
-      return !navigator.ml.createContext().tf;
-    } else {
-      return false;
-    }
-  }
-}
+// export function isWebNN() {
+//   // This would be used in
+//   // https://github.com/webmachinelearning/webnn-native/tree/main/node/examples/electron/webnn-samples,
+//   // where WebNN is enabled by default.
+//   if (isElectron()) {
+//     return true;
+//   } else {
+//     if (typeof MLGraphBuilder !== 'undefined') {
+//       return !navigator.ml.createContext().tf;
+//     } else {
+//       return false;
+//     }
+//   }
+// }
