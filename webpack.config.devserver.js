@@ -4,7 +4,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 
 module.exports = {
-    entry: "./src/main.js",
+    entry: "./src/main.ts",
     mode: 'development',
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -30,36 +30,36 @@ module.exports = {
     // devtool: "source-map",
 
     resolve: {
-        // extensions: ['.ts', '.tsx', '.js', '.jsx', '.scss'],
-        extensions: ['.js', '.jsx', '.scss'],
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.scss'],
+        // extensions: ['.js', '.jsx', '.scss'],
         modules: ['node_modules']
     },
 
     module: {
         rules: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
-            // {
-            //     test: /\.tsx?$/,
-            //     exclude: /node_modules/,
-            //     use: "ts-loader"
-            // },
-            // // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
-            // {
-            //     enforce: 'pre',
-            //     test: /\.js$/,
-            //     loader: "source-map-loader"
-            // },
+            {
+                test: /\.tsx?$/,
+                exclude: /node_modules/,
+                use: "ts-loader"
+            },
+            // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
+            {
+                enforce: 'pre',
+                test: /\.js$/,
+                loader: "source-map-loader"
+            },
             {
                 test: /\.(png|jpg|gif|npy)$/i,
                 use: [
-                  {
-                    loader: 'url-loader',
-                    options: {
-                      limit: 8192,
+                    {
+                        loader: 'url-loader',
+                        options: {
+                            limit: 8192,
+                        },
                     },
-                  },
                 ],
-              },
+            },
         ]
     },
     plugins: [

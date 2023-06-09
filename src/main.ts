@@ -1,5 +1,5 @@
 import '@webmachinelearning/webnn-polyfill'
-import { buildConstantByNpy, getInputTensor, setBackend, sizeOfShape } from "./common/utils"
+import { buildConstantByNpy, getInputTensor, sizeOfShape } from "./common/utils"
 import irradiance_img_path from './dataset/color0.png'
 import albedo_img_path from './dataset/albedo0.png'
 import depth_img_path from './dataset/depth0.png'
@@ -55,7 +55,7 @@ function _loadImage(url) {
     })
 }
 
-async function _loadInputs(state) {
+async function _loadInputs() {
     // TODO gamma correction
     let irradiance_tensor = getInputTensor(await _loadImage(irradiance_img_path), {
         // TODO error?
@@ -120,7 +120,7 @@ async function _buildConv(builder, input, weightNpyFilePath) {
     )
 }
 
-function _buildConvS(input, i) {
+function _buildConvS(builder, input, i) {
     let kernel_base_size = 3
     let kernel_size_stride = 2
 
@@ -145,12 +145,12 @@ function _buildConvS(input, i) {
 
 function _softmaxNCHW4DTensor(builder, tensor, axis) {
     let max_x = builder.reduceMax(tensor, { axes: [axis], keepDimensions: true });
-    let exp_x = builder.exp(builder.sub(x, max_x));
+    let exp_x = builder.exp(builder.sub(tensor, max_x));
 
     return builder.div(exp_x, builder.reduceSum(exp_x, { axes: [axis], keepDimensions: true }));
 }
 
-async function _kernelFusion(builder, x_irradiance, x_albedo, convFinalOutput) {
+async function _kernelFusion(builder, input_irradiance, input_albedo, convFinalOutput) {
     let kernel_num = 6
 
     let x_guidemap = builder.exp(
@@ -170,19 +170,19 @@ async function _kernelFusion(builder, x_irradiance, x_albedo, convFinalOutput) {
         new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
     )
 
-    for (i = 0; i++; i < kernel_num) {
+    for (let i = 0; i++; i < kernel_num) {
         // [1,1,720,1280]
-        let x_guidemap_windowsum = _buildConvS(builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
 
         x_out_r = builder.add(
             x_out_r,
             builder.mul(
                 builder.slice(x_alpha, [i], [1], { axes: [2] }),
                 builder.div(
-                    _buildConvS(
+                    _buildConvS(builder,
                         builder.mul(
                             builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(x_irradiance, [0], [1], { axes: [2] })
+                            builder.slice(input_irradiance, [0], [1], { axes: [2] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -197,19 +197,19 @@ async function _kernelFusion(builder, x_irradiance, x_albedo, convFinalOutput) {
         new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
     )
 
-    for (i = 0; i++; i < kernel_num) {
+    for (let i = 0; i++; i < kernel_num) {
         // [1,1,720,1280]
-        let x_guidemap_windowsum = _buildConvS(builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
 
         x_out_g = builder.add(
             x_out_g,
             builder.mul(
                 builder.slice(x_alpha, [i], [1], { axes: [2] }),
                 builder.div(
-                    _buildConvS(
+                    _buildConvS(builder,
                         builder.mul(
                             builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(x_irradiance, [1], [1], { axes: [2] })
+                            builder.slice(input_irradiance, [1], [1], { axes: [2] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -226,19 +226,19 @@ async function _kernelFusion(builder, x_irradiance, x_albedo, convFinalOutput) {
         new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
     )
 
-    for (i = 0; i++; i < kernel_num) {
+    for (let i = 0; i++; i < kernel_num) {
         // [1,1,720,1280]
-        let x_guidemap_windowsum = _buildConvS(builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
 
         x_out_b = builder.add(
             x_out_b,
             builder.mul(
                 builder.slice(x_alpha, [i], [1], { axes: [2] }),
                 builder.div(
-                    _buildConvS(
+                    _buildConvS(builder,
                         builder.mul(
                             builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(x_irradiance, [2], [1], { axes: [2] })
+                            builder.slice(input_irradiance, [2], [1], { axes: [2] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -249,13 +249,13 @@ async function _kernelFusion(builder, x_irradiance, x_albedo, convFinalOutput) {
     //[1,3,720,1280]
     let x_out = builder.concat([x_out_r, x_out_g, x_out_b], 2)
 
-    x_out = builder.mul(x_out, x_albedo)
+    x_out = builder.mul(x_out, input_albedo)
 
     return x_out
 }
 
-async function _load(state, contextOptions, irradiance_tensor, albedo_tensor) {
-    let context = await navigator.ml.createContext(contextOptions)
+async function _load(state, contextOptions) {
+    let context = await (navigator as any).ml.createContext(contextOptions)
 
     let tf = context.tf
     //TODO really use webgpu? or just webgl?
@@ -289,7 +289,7 @@ async function _load(state, contextOptions, irradiance_tensor, albedo_tensor) {
     let convFinal = await _buildConv(builder, conv5, convFinalWeight_path)
 
 
-    let x_out = _kernelFusion(builder, irradiance_tensor, albedo_tensor, convFinal)
+    let x_out = await _kernelFusion(builder, input_irradiance, input_albedo, convFinal)
 
 
     return {
@@ -347,13 +347,15 @@ window.onload = async () => {
 
     state = await _load(state, {
         deviceType: "gpu"
-    }, irradiance_tensor, albedo_tensor)
+    })
 
 
     state = await _build(state, state.output)
 
-    let outputBuffer = new Float32Array(utils.sizeOfShape([1, 3, 720, 1280]));
+    let outputBuffer = new Float32Array(sizeOfShape([1, 3, 720, 1280]));
     let results = await _compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
+
+    console.log(results.outputs.output)
 
 
     //write results.outputs.output to .png
