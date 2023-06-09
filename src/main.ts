@@ -1,5 +1,5 @@
 import { buildConstantByNpy, sizeOfShape } from "./common/utils"
-import { build, compute, createState, init, load } from "./wpsk"
+import { build, compute, createComputeGraphOfInputAndAllConvs, createComputeGraphOfKernelFusion, createState, init } from "./wpsk"
 import { loadInputs } from "./input"
 import conv1Weight_path from './checkpoints/open-source-test/classroom/conv1Weight.npy'
 import conv2Weight_path from './checkpoints/open-source-test/classroom/conv2Weight.npy'
@@ -18,13 +18,15 @@ window.onload = async () => {
         deviceType: "gpu"
     })
 
-    state = load(state,
+    state = createComputeGraphOfInputAndAllConvs(state,
         [1280, 720],
         [
             await buildConstantByNpy(state.builder, conv1Weight_path),
             await buildConstantByNpy(state.builder, conv2Weight_path), await buildConstantByNpy(state.builder, conv3Weight_path), await buildConstantByNpy(state.builder, conv4Weight_path), await buildConstantByNpy(state.builder, conv5Weight_path), await buildConstantByNpy(state.builder, convFinalWeight_path),
         ])
-
+    state = createComputeGraphOfKernelFusion(state,
+        [1280, 720]
+    )
 
     state = await build(state, state.output)
 

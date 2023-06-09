@@ -8,6 +8,11 @@ export let createState = () => {
         context: null,
         builder: null,
         graph: null,
+        input_irradiance: null,
+        input_albedo: null,
+        input_normal: null,
+        input_depth: null,
+        convFinal: null,
         output: null
     }
 }
@@ -88,9 +93,9 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
     let kernel_num = 6
 
     let x_guidemap = builder.exp(
-        builder.slice(convFinalOutput, [0], [kernel_num], { axes: [2] })
+        builder.slice(convFinalOutput, [0], [kernel_num], { axes: [1] })
     )
-    let x_alpha = _softmaxNCHW4DTensor(builder, builder.slice(convFinalOutput, [kernel_num], [kernel_num], { axes: [2] }), 2)
+    let x_alpha = _softmaxNCHW4DTensor(builder, builder.slice(convFinalOutput, [kernel_num], [kernel_num], { axes: [1] }), 2)
 
 
 
@@ -106,17 +111,17 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
 
     for (let i = 0; i++; i < kernel_num) {
         // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
 
         x_out_r = builder.add(
             x_out_r,
             builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [2] }),
+                builder.slice(x_alpha, [i], [1], { axes: [1] }),
                 builder.div(
                     _buildConvS(builder,
                         builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(input_irradiance, [0], [1], { axes: [2] })
+                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
+                            builder.slice(input_irradiance, [0], [1], { axes: [1] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -133,17 +138,17 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
 
     for (let i = 0; i++; i < kernel_num) {
         // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
 
         x_out_g = builder.add(
             x_out_g,
             builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [2] }),
+                builder.slice(x_alpha, [i], [1], { axes: [1] }),
                 builder.div(
                     _buildConvS(builder,
                         builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(input_irradiance, [1], [1], { axes: [2] })
+                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
+                            builder.slice(input_irradiance, [1], [1], { axes: [1] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -162,17 +167,17 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
 
     for (let i = 0; i++; i < kernel_num) {
         // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [2] }), i)
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
 
         x_out_b = builder.add(
             x_out_b,
             builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [2] }),
+                builder.slice(x_alpha, [i], [1], { axes: [1] }),
                 builder.div(
                     _buildConvS(builder,
                         builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [2] }),
-                            builder.slice(input_irradiance, [2], [1], { axes: [2] })
+                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
+                            builder.slice(input_irradiance, [2], [1], { axes: [1] })
                         ), i),
                     x_guidemap_windowsum
                 )
@@ -181,7 +186,7 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
     }
 
     //[1,3,height,width]
-    let x_out = builder.concat([x_out_r, x_out_g, x_out_b], 2)
+    let x_out = builder.concat([x_out_r, x_out_g, x_out_b], 1)
 
     x_out = builder.mul(x_out, input_albedo)
 
@@ -205,7 +210,7 @@ export let init = async (state, contextOptions) => {
     }
 }
 
-export let load = (state, [width, height], [conv1Weight, conv2Weight, conv3Weight, conv4Weight, conv5Weight, convFinalWeight]) => {
+export let createComputeGraphOfInputAndAllConvs = (state, [width, height], [conv1Weight, conv2Weight, conv3Weight, conv4Weight, conv5Weight, convFinalWeight]) => {
     let { builder } = state
 
     let input_irradianceShape = [1, 3, height, width]
@@ -222,8 +227,10 @@ export let load = (state, [width, height], [conv1Weight, conv2Weight, conv3Weigh
 
 
     //shape: [1,10,height,width]
-    let input = builder.concat([input_irradiance, input_albedo, input_normal, input_depth], 2)
+    let input = builder.concat([input_irradiance, input_albedo, input_normal, input_depth], 1)
 
+    // console.log(input)
+    // console.log(conv1Weight)
 
     let conv1 = _buildConv(builder, input, conv1Weight)
     let conv2 = _buildConv(builder, conv1, conv2Weight)
@@ -232,17 +239,24 @@ export let load = (state, [width, height], [conv1Weight, conv2Weight, conv3Weigh
     let conv5 = _buildConv(builder, conv4, conv5Weight)
     let convFinal = _buildConv(builder, conv5, convFinalWeight)
 
-
-    let x_out = _kernelFusion(builder, [width, height], input_irradiance, input_albedo, convFinal)
-
-
     return {
         ...state,
-        output: x_out
+        input_irradiance,
+        input_albedo,
+        input_normal,
+        input_depth,
+        convFinal
     }
 }
 
-
+export let createComputeGraphOfKernelFusion = (
+    state, [width, height]
+) => {
+    return {
+        ...state,
+        output: _kernelFusion(state.builder, [width, height], state.input_irradiance, state.input_albedo, state.convFinal)
+    }
+}
 
 export let build = async (state, outputOperand) => {
     let graph = await state.builder.build({ 'output': outputOperand })

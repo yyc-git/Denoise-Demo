@@ -1,29 +1,30 @@
 import { loadFeature, defineFeature } from 'jest-cucumber';
 import { sizeOfShape } from '../../src/common/utils';
-import { build, compute, createState, load } from "../../src/wpsk"
+import { build, compute, createComputeGraphOfInputAndAllConvs, createState } from "../../src/wpsk"
 import { convertImageDataToFloat32Tensor } from '../utils/TensorUtils';
 
 const feature = loadFeature('./test/features/wspk.feature');
 
 defineFeature(feature, test => {
-  test('denoise', ({
+  let state
+  let context, builder
+  let results
+
+  function _buildWeight(dimensions, value) {
+    return builder.constant({ type: "float32", dimensions: dimensions },
+      new Float32Array(sizeOfShape(dimensions)).fill(value)
+    )
+  }
+
+  test('create compute graph of input and allConvs', ({
     given,
     and,
     when,
     then
   }) => {
-    let state
-    let context, builder
     let width = 1
     let height = 2
     let irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor
-    let results
-
-    function _buildWeight(dimensions, value) {
-      return builder.constant({ type: "float32", dimensions: dimensions },
-        new Float32Array(sizeOfShape(dimensions)).fill(value)
-      )
-    }
 
     given('prepare fake input: irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor', () => {
       irradiance_tensor = convertImageDataToFloat32Tensor(
@@ -55,7 +56,7 @@ defineFeature(feature, test => {
         [1, 1, height, width]
       )
 
-      // console.log(depth_tensor)
+      // console.log(irradiance_tensor)
     })
 
     and('create context', async () => {
@@ -91,8 +92,8 @@ defineFeature(feature, test => {
       }
     })
 
-    and('load', () => {
-      state = load(state,
+    and('create compute graph of input and allConvs', () => {
+      state = createComputeGraphOfInputAndAllConvs(state,
         [width, height],
         [
           _buildWeight(
@@ -124,18 +125,42 @@ defineFeature(feature, test => {
     })
 
     and('build', async () => {
-      state = await build(state, state.output)
+      state = await build(state, state.convFinal)
     })
 
     when('compute with input', async () => {
-      let outputBuffer = new Float32Array(sizeOfShape([1, 3, height, width]));
+      let outputBuffer = new Float32Array(sizeOfShape([1, 12, height, width]));
 
       results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
     });
 
-    then('get denoised scene image data', () => {
-      //TODO finish
-      expect(results.outputs.output).toEqual(new Float32Array([]))
+    then('get correct data', () => {
+      expect(results.outputs.output).toEqual(new Float32Array([
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+        232339968,
+      ]))
     });
   });
 });
