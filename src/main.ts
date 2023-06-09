@@ -1,5 +1,5 @@
 import { buildConstantByNpy, sizeOfShape } from "./common/utils"
-import { build, compute, createComputeGraphOfInputAndAllConvs, createComputeGraphOfKernelFusion, createState, init } from "./wpsk"
+import { build, compute, createComputeGraphOfInputAndAllConvs, createComputeGraphOfKernelFusion, createState, init } from "./wspk"
 import { loadInputs } from "./input"
 import conv1Weight_path from './checkpoints/open-source-test/classroom/conv1Weight.npy'
 import conv2Weight_path from './checkpoints/open-source-test/classroom/conv2Weight.npy'

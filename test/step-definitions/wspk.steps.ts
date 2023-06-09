@@ -1,6 +1,6 @@
 import { loadFeature, defineFeature } from 'jest-cucumber';
 import { sizeOfShape } from '../../src/common/utils';
-import { build, compute, createComputeGraphOfInputAndAllConvs, createState } from "../../src/wpsk"
+import { build, compute, createComputeGraphOfInputAndAllConvs, createState } from "../../src/wspk"
 import { convertImageDataToFloat32Tensor } from '../utils/TensorUtils';
 
 const feature = loadFeature('./test/features/wspk.feature');
