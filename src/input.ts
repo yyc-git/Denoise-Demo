@@ -1,8 +1,12 @@
 import { getInputTensor } from "./common/utils"
-import irradiance_img_path from './dataset/color0.png'
-import albedo_img_path from './dataset/albedo0.png'
-import depth_img_path from './dataset/depth0.png'
-import normal_img_path from './dataset/shading_normal0.png'
+// import irradiance_img_path from './dataset/color0.png'
+// import albedo_img_path from './dataset/albedo0.png'
+// import depth_img_path from './dataset/depth0.png'
+// import normal_img_path from './dataset/shading_normal0.png'
+import irradiance_img_path from './dataset/small/color0.png'
+import albedo_img_path from './dataset/small/albedo0.png'
+import depth_img_path from './dataset/small/depth0.png'
+import normal_img_path from './dataset/small/shading_normal0.png'
 
 let _loadImage = (url) => {
     let image = new Image()
@@ -15,23 +19,23 @@ let _loadImage = (url) => {
     })
 }
 
-export let loadInputs = async () => {
+export let loadInputs = async ([width, height]) => {
     // TODO gamma correction
     let irradiance_tensor = getInputTensor(await _loadImage(irradiance_img_path), {
         // TODO error?
-        inputDimensions: [1, 3, 720, 1280],
+        inputDimensions: [1, 3, height, width],
         inputLayout: 'nchw',
         norm: true
     })
 
     let albedo_tensor = getInputTensor(await _loadImage(albedo_img_path), {
-        inputDimensions: [1, 3, 720, 1280],
+        inputDimensions: [1, 3, height, width],
         inputLayout: 'nchw',
         norm: true
     })
 
     let normal_tensor = getInputTensor(await _loadImage(normal_img_path), {
-        inputDimensions: [1, 3, 720, 1280],
+        inputDimensions: [1, 3, height, width],
         inputLayout: 'nchw',
         norm: true
     })
@@ -39,7 +43,7 @@ export let loadInputs = async () => {
     // TODO normal_tensor = normal_tensor.map(value => value * 0.5 + 0.5)?
 
     let depth_tensor = getInputTensor(await _loadImage(depth_img_path), {
-        inputDimensions: [1, 1, 720, 1280],
+        inputDimensions: [1, 1, height, width],
         inputLayout: 'nchw',
         norm: true
     })
