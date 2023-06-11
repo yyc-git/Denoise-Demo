@@ -89,101 +89,51 @@ let _softmaxNCHW4DTensor = (builder, tensor, axis) => {
     return builder.div(exp_x, builder.reduceSum(exp_x, { axes: [axis], keepDimensions: true }));
 }
 
+let _computeForOneChannelInIrradiance = (builder, [width, height], channelIndex, kernel_num, x_guidemap, x_alpha, input_irradiance) => {
+    let outputSingleChannelDimension = [1, 1, height, width]
+    let x_out = builder.constant(
+        { type: 'float32', dimensions: outputSingleChannelDimension },
+        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
+    )
+    for (let i = 0; i < kernel_num; i++) {
+        // [1,1,height,width]
+        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
+
+        x_out = builder.add(
+            x_out,
+            builder.mul(
+                builder.slice(x_alpha, [i], [1], { axes: [1] }),
+                builder.div(
+                    _buildConvS(builder,
+                        builder.mul(
+                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
+                            builder.slice(input_irradiance, [channelIndex], [1], { axes: [1] })
+                        ), i),
+                    x_guidemap_windowsum
+                )
+
+            )
+        )
+    }
+
+    return x_out
+}
+
 let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, convFinalOutput) => {
     let kernel_num = 6
 
     let x_guidemap = builder.exp(
         builder.slice(convFinalOutput, [0], [kernel_num], { axes: [1] })
     )
-    let x_alpha = _softmaxNCHW4DTensor(builder, builder.slice(convFinalOutput, [kernel_num], [kernel_num], { axes: [1] }), 2)
 
-
+    let x_alpha = _softmaxNCHW4DTensor(builder, builder.slice(convFinalOutput, [kernel_num], [kernel_num], { axes: [1] }), 1)
 
     // TODO optimize
     // refer to https://discuss.pytorch.org/t/applying-conv2d-filter-to-all-channels-seperately-is-my-solution-efficient/22840
 
-    // let outputDimension = [1, 3, height, width]
-    let outputSingleChannelDimension = [1, 1, height, width]
-    let x_out_r = builder.constant(
-        { type: 'float32', dimensions: outputSingleChannelDimension },
-        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
-    )
-
-    for (let i = 0; i++; i < kernel_num) {
-        // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
-
-        x_out_r = builder.add(
-            x_out_r,
-            builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [1] }),
-                builder.div(
-                    _buildConvS(builder,
-                        builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
-                            builder.slice(input_irradiance, [0], [1], { axes: [1] })
-                        ), i),
-                    x_guidemap_windowsum
-                )
-
-            )
-        )
-    }
-
-
-    let x_out_g = builder.constant(
-        { type: 'float32', dimensions: outputSingleChannelDimension },
-        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
-    )
-
-    for (let i = 0; i++; i < kernel_num) {
-        // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
-
-        x_out_g = builder.add(
-            x_out_g,
-            builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [1] }),
-                builder.div(
-                    _buildConvS(builder,
-                        builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
-                            builder.slice(input_irradiance, [1], [1], { axes: [1] })
-                        ), i),
-                    x_guidemap_windowsum
-                )
-
-            )
-        )
-    }
-
-
-
-
-    let x_out_b = builder.constant(
-        { type: 'float32', dimensions: outputSingleChannelDimension },
-        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
-    )
-
-    for (let i = 0; i++; i < kernel_num) {
-        // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
-
-        x_out_b = builder.add(
-            x_out_b,
-            builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [1] }),
-                builder.div(
-                    _buildConvS(builder,
-                        builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
-                            builder.slice(input_irradiance, [2], [1], { axes: [1] })
-                        ), i),
-                    x_guidemap_windowsum
-                )
-            )
-        )
-    }
+    let x_out_r = _computeForOneChannelInIrradiance(builder, [width, height], 0, kernel_num, x_guidemap, x_alpha, input_irradiance)
+    let x_out_g = _computeForOneChannelInIrradiance(builder, [width, height], 1, kernel_num, x_guidemap, x_alpha, input_irradiance)
+    let x_out_b = _computeForOneChannelInIrradiance(builder, [width, height], 2, kernel_num, x_guidemap, x_alpha, input_irradiance)
 
     //[1,3,height,width]
     let x_out = builder.concat([x_out_r, x_out_g, x_out_b], 1)
@@ -210,7 +160,7 @@ export let init = async (state, contextOptions) => {
     }
 }
 
-export let createComputeGraphOfInputAndAllConvs = (state, [width, height], [conv1Weight, conv2Weight, conv3Weight, conv4Weight, conv5Weight, convFinalWeight]) => {
+export let createComputeGraphOfInput = (state, [width, height]) => {
     let { builder } = state
 
     let input_irradianceShape = [1, 3, height, width]
@@ -225,6 +175,23 @@ export let createComputeGraphOfInputAndAllConvs = (state, [width, height], [conv
     let input_depthShape = [1, 1, height, width]
     let input_depth = builder.input('input_depth', { type: 'float32', dimensions: input_depthShape })
 
+    return {
+        ...state,
+        input_irradiance,
+        input_albedo,
+        input_normal,
+        input_depth,
+    }
+}
+
+export let createComputeGraphOfAllConvs = (state, [conv1Weight, conv2Weight, conv3Weight, conv4Weight, conv5Weight, convFinalWeight]) => {
+    let {
+        builder,
+        input_irradiance,
+        input_albedo,
+        input_normal,
+        input_depth,
+    } = state
 
     //shape: [1,10,height,width]
     let input = builder.concat([input_irradiance, input_albedo, input_normal, input_depth], 1)
@@ -241,10 +208,6 @@ export let createComputeGraphOfInputAndAllConvs = (state, [width, height], [conv
 
     return {
         ...state,
-        input_irradiance,
-        input_albedo,
-        input_normal,
-        input_depth,
         convFinal
     }
 }
@@ -266,7 +229,6 @@ export let build = async (state, outputOperand) => {
         graph
     }
 }
-
 
 export let compute = async (state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, output) => {
     let inputs = {

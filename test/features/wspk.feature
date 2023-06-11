@@ -14,6 +14,15 @@ Feature: WSPK
         When compute with input
         Then get correct data
 
-# TODO add 
-#     Scenario: create compute graph of kernel fusion
-#     first test simple data
+    Scenario: create compute graph of kernel fusion
+        Given prepare fake input: irradiance_tensor, albedo_tensor
+        And create context
+        And set backend to cpu
+        And create builder
+        And prepare convFinal
+        And create state
+        And create compute graph of input
+        And create compute graph of kernel fusion
+        And build
+        When compute with input
+        Then get correct data
