@@ -89,34 +89,51 @@ let _softmaxNCHW4DTensor = (builder, tensor, axis) => {
     return builder.div(exp_x, builder.reduceSum(exp_x, { axes: [axis], keepDimensions: true }));
 }
 
-let _computeForOneChannelInIrradiance = (builder, [width, height], channelIndex, kernel_num, x_guidemap, x_alpha, input_irradiance) => {
-    let outputSingleChannelDimension = [1, 1, height, width]
-    let x_out = builder.constant(
-        { type: 'float32', dimensions: outputSingleChannelDimension },
-        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
-    )
-    for (let i = 0; i < kernel_num; i++) {
-        // [1,1,height,width]
-        let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
+// let _computeForOneChannelInIrradiance = (builder, [width, height], channelIndex, kernel_num, x_guidemap, x_alpha, input_irradiance) => {
+let _computeForOneChannelInIrradiance = (builder, x_guidemap_windowsum, x_out_singleChannel, x_alpha_slice, x_guidemap_slice, input_irradiance_singleChannel, i) => {
+    // let outputSingleChannelDimension = [1, 1, height, width]
+    // let x_out = builder.constant(
+    //     { type: 'float32', dimensions: outputSingleChannelDimension },
+    //     new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
+    // )
+    // for (let i = 0; i < kernel_num; i++) {
+    //     // [1,1,height,width]
+    //     let x_guidemap_windowsum = _buildConvS(builder, builder.slice(x_guidemap, [i], [1], { axes: [1] }), i)
 
-        x_out = builder.add(
-            x_out,
-            builder.mul(
-                builder.slice(x_alpha, [i], [1], { axes: [1] }),
-                builder.div(
-                    _buildConvS(builder,
-                        builder.mul(
-                            builder.slice(x_guidemap, [i], [1], { axes: [1] }),
-                            builder.slice(input_irradiance, [channelIndex], [1], { axes: [1] })
-                        ), i),
-                    x_guidemap_windowsum
-                )
+    //     x_out = builder.add(
+    //         x_out,
+    //         builder.mul(
+    //             builder.slice(x_alpha, [i], [1], { axes: [1] }),
+    //             builder.div(
+    //                 _buildConvS(builder,
+    //                     builder.mul(
+    //                         builder.slice(x_guidemap, [i], [1], { axes: [1] }),
+    //                         builder.slice(input_irradiance, [channelIndex], [1], { axes: [1] })
+    //                     ), i),
+    //                 x_guidemap_windowsum
+    //             )
 
+    //         )
+    //     )
+    // }
+
+    // return x_out
+
+
+    return builder.add(
+        x_out_singleChannel,
+        builder.mul(
+            x_alpha_slice,
+            builder.div(
+                _buildConvS(builder,
+                    builder.mul(
+                        x_guidemap_slice,
+                        input_irradiance_singleChannel
+                    ), i),
+                x_guidemap_windowsum
             )
         )
-    }
-
-    return x_out
+    )
 }
 
 let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, convFinalOutput) => {
@@ -131,9 +148,33 @@ let _kernelFusion = (builder, [width, height], input_irradiance, input_albedo, c
     // TODO optimize
     // refer to https://discuss.pytorch.org/t/applying-conv2d-filter-to-all-channels-seperately-is-my-solution-efficient/22840
 
-    let x_out_r = _computeForOneChannelInIrradiance(builder, [width, height], 0, kernel_num, x_guidemap, x_alpha, input_irradiance)
-    let x_out_g = _computeForOneChannelInIrradiance(builder, [width, height], 1, kernel_num, x_guidemap, x_alpha, input_irradiance)
-    let x_out_b = _computeForOneChannelInIrradiance(builder, [width, height], 2, kernel_num, x_guidemap, x_alpha, input_irradiance)
+    let outputSingleChannelDimension = [1, 1, height, width]
+    let x_out_r = builder.constant(
+        { type: 'float32', dimensions: outputSingleChannelDimension },
+        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
+    )
+    let x_out_g = builder.constant(
+        { type: 'float32', dimensions: outputSingleChannelDimension },
+        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
+    )
+    let x_out_b = builder.constant(
+        { type: 'float32', dimensions: outputSingleChannelDimension },
+        new Float32Array(sizeOfShape(outputSingleChannelDimension)).fill(0.0)
+    )
+
+    let r = builder.slice(input_irradiance, [0], [1], { axes: [1] })
+    let g = builder.slice(input_irradiance, [1], [1], { axes: [1] })
+    let b = builder.slice(input_irradiance, [2], [1], { axes: [1] })
+
+    for (let i = 0; i < kernel_num; i++) {
+        let x_guidemap_slice = builder.slice(x_guidemap, [i], [1], { axes: [1] })
+        let x_guidemap_windowsum = _buildConvS(builder, x_guidemap_slice, i)
+        let x_alpha_slice = builder.slice(x_alpha, [i], [1], { axes: [1] })
+
+        x_out_r = _computeForOneChannelInIrradiance(builder, x_guidemap_windowsum, x_out_r, x_alpha_slice, x_guidemap_slice, r, i)
+        x_out_g = _computeForOneChannelInIrradiance(builder, x_guidemap_windowsum, x_out_g, x_alpha_slice, x_guidemap_slice, g, i)
+        x_out_b = _computeForOneChannelInIrradiance(builder, x_guidemap_windowsum, x_out_b, x_alpha_slice, x_guidemap_slice, b, i)
+    }
 
     //[1,3,height,width]
     let x_out = builder.concat([x_out_r, x_out_g, x_out_b], 1)
