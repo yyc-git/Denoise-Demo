@@ -195,6 +195,8 @@ export let init = async (state, contextOptions) => {
     let tf = context.tf
     //TODO really use webgpu? or just webgl?
     // await tf.setBackend("webgpu")
+    // await tf.setBackend("webgl")
+    tf.env().set('WEBGL_EXP_CONV', true);
     await tf.setBackend("webgl")
     await tf.ready()
 

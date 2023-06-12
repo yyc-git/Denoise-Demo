@@ -37,7 +37,8 @@ let _drawOutput = (outputBuffer, [width, height]) => {
 }
 
 window.onload = async () => {
-    let [width, height] = [256, 256]
+    // let [width, height] = [256, 256]
+    let [width, height] = [1280, 720]
 
     let state = createState()
 
