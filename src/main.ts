@@ -62,7 +62,15 @@ window.onload = async () => {
     state = await build(state, state.output)
 
     let outputBuffer = new Float32Array(sizeOfShape([1, 3, width, height]));
-    let results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
+
+    let results
+    //warm up
+    results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
+
+    let start = performance.now();
+    results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
+    console.log(performance.now() - start)
+
 
     // console.log(results.outputs.output)
 
