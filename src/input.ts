@@ -1,12 +1,12 @@
 import { getInputTensor } from "./common/utils"
-// import irradiance_img_path from './dataset/color0.png'
-// import albedo_img_path from './dataset/albedo0.png'
-// import depth_img_path from './dataset/depth0.png'
-// import normal_img_path from './dataset/shading_normal0.png'
-import irradiance_img_path from './dataset/small/color0.png'
-import albedo_img_path from './dataset/small/albedo0.png'
-import depth_img_path from './dataset/small/depth0.png'
-import normal_img_path from './dataset/small/shading_normal0.png'
+import irradiance_img_path from './dataset/color0.png'
+import albedo_img_path from './dataset/albedo0.png'
+import depth_img_path from './dataset/depth0.png'
+import normal_img_path from './dataset/shading_normal0.png'
+// import irradiance_img_path from './dataset/small/color0.png'
+// import albedo_img_path from './dataset/small/albedo0.png'
+// import depth_img_path from './dataset/small/depth0.png'
+// import normal_img_path from './dataset/small/shading_normal0.png'
 
 let _loadImage = (url) => {
     let image = new Image()
