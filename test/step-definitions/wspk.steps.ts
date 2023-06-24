@@ -92,7 +92,7 @@ defineFeature(feature, test => {
       }
     })
 
-    and('create compute graph of input and allConvs', () => {
+    when('create compute graph of input and allConvs', () => {
       state = createComputeGraphOfInput(state,
         [width, height]
       )
@@ -130,7 +130,7 @@ defineFeature(feature, test => {
       state = await build(state, state.convFinal)
     })
 
-    when('compute with input', async () => {
+    And('compute with input', async () => {
       let outputBuffer = new Float32Array(sizeOfShape([1, 12, height, width]));
 
       results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)
@@ -258,7 +258,7 @@ defineFeature(feature, test => {
       )
     })
 
-    and('create compute graph of kernel fusion', () => {
+    when('create compute graph of kernel fusion', () => {
       state = createComputeGraphOfKernelFusion(state,
         [width, height]
       )
@@ -268,7 +268,7 @@ defineFeature(feature, test => {
       state = await build(state, state.output)
     })
 
-    when('compute with input', async () => {
+    and('compute with input', async () => {
       let outputBuffer = new Float32Array(sizeOfShape([1, 3, height, width]));
 
       // results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)

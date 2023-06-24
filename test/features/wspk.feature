@@ -9,9 +9,9 @@ Feature: WSPK
         And set backend to cpu
         And create builder
         And create state
-        And create compute graph of input and allConvs
+        When create compute graph of input and allConvs
         And build
-        When compute with input
+        And compute with input
         Then get correct data
 
     Scenario: create compute graph of kernel fusion
@@ -22,7 +22,7 @@ Feature: WSPK
         And prepare convFinal
         And create state
         And create compute graph of input
-        And create compute graph of kernel fusion
+        When create compute graph of kernel fusion
         And build
-        When compute with input
+        And compute with input
         Then get correct data
