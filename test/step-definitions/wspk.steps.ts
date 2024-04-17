@@ -130,7 +130,7 @@ defineFeature(feature, test => {
       state = await build(state, state.convFinal)
     })
 
-    And('compute with input', async () => {
+    and('compute with input', async () => {
       let outputBuffer = new Float32Array(sizeOfShape([1, 12, height, width]));
 
       results = await compute(state, irradiance_tensor, albedo_tensor, normal_tensor, depth_tensor, outputBuffer)

@@ -27,6 +27,6 @@
     "webpack-dev-server": "^4.4.0"
   },
   "dependencies": {
-    "@webmachinelearning/webnn-polyfill": "^0.1.7"
+    "@webmachinelearning/webnn-polyfill": "0.1.7"
   }
 }
