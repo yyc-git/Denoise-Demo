@@ -1,12 +1,9 @@
 # How to install
 
-```js
-npm install --registry https://registry.npmmirror.com
-```
-
-
 项目根目录下运行：
 ```js
+npm install --registry https://registry.npmmirror.com
+
 npm run webpack:dev-server
 ```
 
